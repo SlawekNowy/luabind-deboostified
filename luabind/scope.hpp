@@ -20,22 +20,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 // OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef NEW_SCOPE_040211_HPP
-#define NEW_SCOPE_040211_HPP
+#ifndef SCOPE_CA898A04_B83A_4D30_B6DA_647F372F25BA
+#define SCOPE_CA898A04_B83A_4D30_B6DA_647F372F25BA
 
 #include <luabind/prefix.hpp>
 #include <luabind/config.hpp>
 #include <luabind/lua_state_fwd.hpp>
 #include <memory>
 
-namespace luabind {
+namespace luabind
+{
 
 	struct scope;
 
 } // namespace luabind
 
-namespace luabind {
-	namespace detail {
+namespace luabind
+{
+	namespace detail
+	{
 
 		struct LUABIND_API registration
 		{
@@ -43,63 +46,117 @@ namespace luabind {
 			virtual ~registration();
 
 		protected:
-			virtual void register_(lua_State*) const = 0;
+			virtual void register_(lua_State *) const = 0;
 
 		private:
 			friend struct ::luabind::scope;
-			registration* m_next;
+			registration *m_next;
 		};
 
 	}
 } // namespace luabind::detail
 
-namespace luabind {
+namespace luabind
+{
 
 	struct LUABIND_API scope
 	{
 		scope();
 		explicit scope(std::unique_ptr<detail::registration> reg);
-		scope(scope const& other_);
+		scope(scope const &other_) = delete;
+		scope &operator=(const scope &) = delete;
+
+		scope(scope &&other_) noexcept
+			: m_chain(other_.m_chain)
+		{
+			other_.m_chain = nullptr;
+		}
+
+		scope &operator=(scope &&that) noexcept
+		{
+			std::swap(m_chain, that.m_chain);
+			return *this;
+		}
+
 		~scope();
 
-		scope& operator=(scope const& other_);
+		scope &&operator,(scope &&s) &&;
 
-		scope& operator,(scope s);
-
-		void register_(lua_State* L) const;
+		void register_(lua_State *L) const;
 
 	private:
-		detail::registration* m_chain;
+		detail::registration *m_chain;
 	};
 
 	class LUABIND_API namespace_ : public scope
 	{
 	public:
-		explicit namespace_(char const* name);
-		namespace_& operator[](scope s);
+		explicit namespace_(char const *name);
+		namespace_(const namespace_ &) = delete;
+
+		namespace_(namespace_ &&that) noexcept
+			: scope(std::move(that)),
+			  m_registration(that.m_registration)
+		{
+			that.m_registration = nullptr;
+		}
+
+		namespace_ &&operator[](scope &&s) &&;
+
+		namespace_ &operator=(const namespace_ &) = delete;
+
+		namespace_ &operator=(namespace_ &&that) noexcept
+		{
+			scope::operator=(std::move(that));
+			std::swap(m_registration, that.m_registration);
+			return *this;
+		}
 
 	private:
 		struct registration_;
-		registration_* m_registration;
+
+		namespace_(registration_ *);
+
+		registration_ *m_registration;
 	};
 
 	class LUABIND_API module_
 	{
 	public:
-		module_(lua_State* L_, char const* name);
-		void operator[](scope s);
+		module_(lua_State *L_, char const *name);
+		void operator[](scope &&s);
+
+		module_(const module_ &) = delete;
+
+		module_(module_ &&that) noexcept
+			: m_state(that.m_state),
+			  m_name(that.m_name)
+		{
+			that.m_state = nullptr;
+			that.m_name = nullptr;
+		}
+
+		module_ &operator=(const module_ &) = delete;
+
+		module_ &operator=(module_ &&that) noexcept
+		{
+			m_state = that.m_state;
+			m_name = that.m_name;
+			that.m_state = nullptr;
+			that.m_name = nullptr;
+			return *this;
+		}
 
 	private:
-		lua_State* m_state;
-		char const* m_name;
+		lua_State *m_state;
+		char const *m_name;
 	};
 
-	inline module_ module(lua_State* L, char const* name = 0)
+	inline module_ module(lua_State *L, char const *name = 0)
 	{
 		return module_(L, name);
 	}
 
 } // namespace luabind
 
-#endif // NEW_SCOPE_040211_HPP
-
+#endif /* SCOPE_CA898A04_B83A_4D30_B6DA_647F372F25BA */

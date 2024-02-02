@@ -76,6 +76,8 @@
 #include <cassert>
 
 #include <luabind/config.hpp>
+
+//#include <luabind/class_info.hpp>
 #include <luabind/scope.hpp>
 #include <luabind/back_reference.hpp>
 #include <luabind/function.hpp>	// -> object.hpp
@@ -96,6 +98,7 @@
 #include <luabind/no_dependency.hpp>
 #include <luabind/typeid.hpp>
 #include <luabind/detail/meta.hpp>
+
 
 // to remove the 'this' used in initialization list-warning
 #ifdef _MSC_VER
@@ -211,25 +214,39 @@ namespace luabind {
 
 	namespace detail {
 
-		template<class T>
-		struct static_scope
-		{
-			static_scope(T& self_) : self(self_)
-			{
-			}
+		template <typename T>
+        struct static_scope
+        {
+            static_scope(T&& self)
+                : self(std::move(self))
+            {
+            }
 
-			T& operator[](scope s) const
-			{
-				self.add_inner_scope(s);
-				return self;
-			}
+            T operator[](scope&& s) &&
+            {
+                self.add_inner_scope(std::move(s));
+                return std::move(self);
+            }
 
-		private:
-			template<class U> void operator,(U const&) const;
-			void operator=(static_scope const&);
+            static_scope(const static_scope&) = delete;
 
-			T& self;
-		};
+            static_scope(static_scope&& that) noexcept
+                : self(std::move(that.self))
+            {
+            }
+
+            static_scope& operator= (const static_scope&) = delete;
+
+            static_scope& operator= (static_scope&& that) noexcept
+            {
+                self = std::move(that);
+                return *this;
+            }
+
+        private:
+
+            T self;
+        };
 
 		struct class_registration;
 
@@ -256,7 +273,7 @@ namespace luabind {
 			const char* name() const;
 
 			void add_static_constant(const char* name, int val);
-			void add_inner_scope(scope& s);
+			void add_inner_scope(scope&& s);
 
 			void add_cast(class_id src, class_id target, cast_function cast);
 

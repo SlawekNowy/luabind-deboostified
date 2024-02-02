@@ -28,6 +28,8 @@
 #include <luabind/luabind.hpp>
 #include <luabind/object.hpp>
 
+//#include <luabind/class.hpp>
+
 namespace luabind
 {
 	struct LUABIND_API class_info
