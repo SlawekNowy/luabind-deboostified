@@ -115,7 +115,7 @@ namespace luabind
 		};
 
 		template <class Derived>
-		struct operator_;
+	struct operator_;
 
 		struct you_need_to_define_a_get_const_holder_function_for_your_smart_ptr
 		{
@@ -514,27 +514,27 @@ namespace luabind
 		template <class Getter, typename... Injectors>
 		class_ &&property(const char *name, Getter g, policy_list<Injectors...> get_injectors = no_policies())
 		{
-			return property(name, g, null_type(), get_injectors);
+			return std::move(property(name, g, null_type(), get_injectors));
 		}
 
 		template <class Getter, class Setter, typename... GetInjectors, typename... SetInjectors>
 		class_ &&property(const char *name, Getter g, Setter s, policy_list<GetInjectors...> = no_policies(), policy_list<SetInjectors...> = no_policies())
 		{
 			using registration_type = detail::property_registration<T, Getter, policy_list<GetInjectors...>, Setter, policy_list<SetInjectors...>>;
-			std::move(*this)->add_member(new registration_type(name, g, s));
+			std::move(*this).add_member(new registration_type(name, g, s));
 			return std::move(*this);
 		}
 
 		template <class C, class D, typename... Injectors>
-		class_ &def_readonly(const char *name, D C::*mem_ptr, policy_list<Injectors...> policies = no_policies())
+		class_ &&def_readonly(const char *name, D C::*mem_ptr, policy_list<Injectors...> policies = no_policies())
 		{
-			return property(name, mem_ptr, policies);
+			return std::move(property(name, mem_ptr, policies));
 		}
 
 		template <class C, class D, typename... GetInjectors, typename... SetInjectors>
-		class_ &def_readwrite(const char *name, D C::*mem_ptr, policy_list<GetInjectors...> get_injectors = no_policies(), policy_list<SetInjectors...> set_injectors = no_policies())
+		class_ &&def_readwrite(const char *name, D C::*mem_ptr, policy_list<GetInjectors...> get_injectors = no_policies(), policy_list<SetInjectors...> set_injectors = no_policies())
 		{
-			return property(name, mem_ptr, mem_ptr, get_injectors, set_injectors);
+			return std::move(property(name, mem_ptr, mem_ptr, get_injectors, set_injectors));
 		}
 
 		// =====================
