@@ -30,13 +30,11 @@
 #include <cassert>
 
 #if LUA_VERSION_NUM < 502
-#define lua_pushglobaltable(L) lua_pushvalue(L, LUA_GLOBALSINDEX)
+# define lua_pushglobaltable(L) lua_pushvalue(L, LUA_GLOBALSINDEX)
 #endif
 
-namespace luabind
-{
-	namespace detail
-	{
+namespace luabind {
+	namespace detail {
 
 		registration::registration()
 			: m_next(0)
@@ -60,53 +58,61 @@ namespace luabind
 	{
 	}
 
+	scope::scope(scope const& other)
+		: m_chain(other.m_chain)
+	{
+		const_cast<scope&>(other).m_chain = 0;
+	}
 
-
-
+	scope& scope::operator=(scope const& other_)
+	{
+		delete m_chain;
+		m_chain = other_.m_chain;
+		const_cast<scope&>(other_).m_chain = 0;
+		return *this;
+	}
 
 	scope::~scope()
 	{
 		delete m_chain;
 	}
 
-    //This can safely be operator<<. In fact that is preferable to default behavior of operator<<
 	scope& scope::operator,(scope s)
 	{
-		if (!m_chain)
+		if(!m_chain)
 		{
 			m_chain = s.m_chain;
-			s.m_chain = nullptr;
-			return std::move(*this);
+			s.m_chain = 0;
+			return *this;
 		}
 
-		for (detail::registration *c = m_chain;; c = c->m_next)
+		for(detail::registration* c = m_chain;; c = c->m_next)
 		{
-			if (!c->m_next)
+			if(!c->m_next)
 			{
 				c->m_next = s.m_chain;
-				s.m_chain = nullptr;
+				s.m_chain = 0;
 				break;
 			}
 		}
 
-		return std::move(*this);
+		return *this;
 	}
 
-	void scope::register_(lua_State *L) const
+	void scope::register_(lua_State* L) const
 	{
-		for (detail::registration *r = m_chain; r != 0; r = r->m_next)
+		for(detail::registration* r = m_chain; r != 0; r = r->m_next)
 		{
 			LUABIND_CHECK_STACK(L);
 			r->register_(L);
 		}
 	}
 
-	namespace
-	{
+	namespace {
 
 		struct lua_pop_stack
 		{
-			lua_pop_stack(lua_State *L)
+			lua_pop_stack(lua_State* L)
 				: m_state(L)
 			{
 			}
@@ -116,23 +122,24 @@ namespace luabind
 				lua_pop(m_state, 1);
 			}
 
-			lua_State *m_state;
+			lua_State* m_state;
 		};
 
 	} // namespace unnamed
 
-	module_::module_(lua_State *L, char const *name = 0)
-		: m_state(L), m_name(name)
+	module_::module_(lua_State* L, char const* name = 0)
+		: m_state(L)
+		, m_name(name)
 	{
 	}
 
-	void module_::operator[](scope &&s)
+	void module_::operator[](scope s)
 	{
-		if (m_name)
+		if(m_name)
 		{
 			lua_getglobal(m_state, m_name);
 
-			if (!lua_istable(m_state, -1))
+			if(!lua_istable(m_state, -1))
 			{
 				lua_pop(m_state, 1);
 
@@ -153,12 +160,12 @@ namespace luabind
 
 	struct namespace_::registration_ : detail::registration
 	{
-		registration_(char const *name)
+		registration_(char const* name)
 			: m_name(name)
 		{
 		}
 
-		void register_(lua_State *L) const
+		void register_(lua_State* L) const
 		{
 			LUABIND_CHECK_STACK(L);
 			assert(lua_gettop(L) >= 1);
@@ -168,7 +175,7 @@ namespace luabind
 
 			detail::stack_pop p(L, 1); // pops the table on exit
 
-			if (!lua_istable(L, -1))
+			if(!lua_istable(L, -1))
 			{
 				lua_pop(L, 1);
 
@@ -181,20 +188,21 @@ namespace luabind
 			m_scope.register_(L);
 		}
 
-		char const *m_name;
+		char const* m_name;
 		scope m_scope;
 	};
 
-	namespace_::namespace_(char const *name)
+	namespace_::namespace_(char const* name)
 		: scope(std::unique_ptr<detail::registration>(
-			  m_registration = new registration_(name)))
+			m_registration = new registration_(name)))
 	{
 	}
 
-	namespace_ &&namespace_::operator[](scope &&s) &&
+	namespace_& namespace_::operator[](scope s)
 	{
-		m_registration->m_scope = std::move(m_registration->m_scope).operator,(std::move(s));
-		return std::move(*this);
+		m_registration->m_scope.operator,(s);
+		return *this;
 	}
 
 } // namespace luabind
+
