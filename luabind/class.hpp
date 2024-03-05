@@ -217,18 +217,20 @@ namespace luabind {
 			static_scope(T& self_) : self(self_)
 			{
 			}
-
+#ifndef _MSC_VER
+			__attribute__((no_sanitize("address")))
+#endif
 			T& operator[](scope s) const
 			{
-				self.add_inner_scope(s);
-				return self;
+				const_cast<T&>(self).add_inner_scope(s);
+				return const_cast<T&>(self);
 			}
 
 		private:
 			template<class U> void operator,(U const&) const;
 			void operator=(static_scope const&);
 
-			T& self;
+			const T& self;
 		};
 
 		struct class_registration;
