@@ -71,10 +71,11 @@ namespace luabind {
 		}
 
 	}
-
-	template <class T, class Enable>
+#pragma warning( push )
+#pragma warning( disable : 4348)
+	template <class T, class Enable = void>
 	struct default_converter;
-
+#pragma warning( pop )
 }
 
 #endif
