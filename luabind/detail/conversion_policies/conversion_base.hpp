@@ -73,7 +73,11 @@ namespace luabind {
 	}
 #pragma warning( push )
 #pragma warning( disable : 4348)
-	template <class T, class Enable = void>
+	template <class T, class Enable
+#ifdef _WIN32
+		= void
+#endif
+	>
 	struct default_converter;
 #pragma warning( pop )
 }
